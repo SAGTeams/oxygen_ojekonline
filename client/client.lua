@@ -9,10 +9,59 @@ local isOjekActive = false
 local startJobPed = nil
 local SpawnVehicle = false
 
+-- Event saat player loading
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    CreateThread(function()
+        Wait(1000) -- Tunggu 1 detik biar semua resource siap
+        CreateStartJobNPC()
+    end)
+end)
+
+-- Bersihkan NPC saat player keluar (opsional tapi rapi)
+RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+    if startJobPed and DoesEntityExist(startJobPed) then
+        DeleteEntity(startJobPed)
+        startJobPed = nil
+    end
+end)
+
+-- Inisialisasi
+AddEventHandler('onResourceStart', function(resourceName)
+    if GetCurrentResourceName() == resourceName then
+        CreateThread(function()
+            while not QBCore do
+                Wait(100)
+            end
+            Wait(1000)
+            CreateStartJobNPC()
+        end)
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() == resourceName then
+        if DoesEntityExist(startJobPed) then
+            DeleteEntity(startJobPed)
+        end
+        if DoesEntityExist(ojekPed) then
+            DeleteEntity(ojekPed)
+        end
+        if blip then
+            RemoveBlip(blip)
+        end
+        exports['qtarget']:RemoveTargetEntity(startJobPed, nil)
+        exports['qtarget']:RemoveTargetEntity(ojekPed, nil)
+    end
+end)
+
 -- Buat NPC untuk memulai job
 function CreateStartJobNPC()
     QBCore.Functions.LoadModel(Config.StartJobPed)
     
+    while not HasModelLoaded(GetHashKey(Config.StartJobPed)) do
+        Wait(100)
+    end
+
     startJobPed = CreatePed(4, GetHashKey(Config.StartJobPed), Config.StartJobLocation.x, Config.StartJobLocation.y, Config.StartJobLocation.z - 1.0, Config.StartJobLocation.w or 0.0, false, true)
     FreezeEntityPosition(startJobPed, true)
     SetEntityInvincible(startJobPed, true)
@@ -351,29 +400,6 @@ Citizen.CreateThread(function()
     BeginTextCommandSetBlipName("STRING")
     AddTextComponentString(Config.NamaBlipNPC)
     EndTextCommandSetBlipName(blip)
-end)
-
--- Inisialisasi
-AddEventHandler('onResourceStart', function(resourceName)
-    if GetCurrentResourceName() == resourceName then
-        CreateStartJobNPC()
-    end
-end)
-
-AddEventHandler('onResourceStop', function(resourceName)
-    if GetCurrentResourceName() == resourceName then
-        if DoesEntityExist(startJobPed) then
-            DeleteEntity(startJobPed)
-        end
-        if DoesEntityExist(ojekPed) then
-            DeleteEntity(ojekPed)
-        end
-        if blip then
-            RemoveBlip(blip)
-        end
-        exports['qtarget']:RemoveTargetEntity(startJobPed, nil)
-        exports['qtarget']:RemoveTargetEntity(ojekPed, nil)
-    end
 end)
 
 local function TombolTextUi(text)
